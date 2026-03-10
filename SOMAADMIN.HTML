@@ -1,0 +1,1349 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>THE SOMA STUDIO | 管理員後台</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <style>
+        body { font-family: 'Noto Sans TC', sans-serif; background-color: #f3f4f6; color: #1f2937; }
+        .tab-btn.active { background-color: #5B2333; color: white; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .styled-table th { background-color: #f8fafc; font-weight: 600; text-align: left; padding: 12px; border-bottom: 2px solid #e2e8f0; whitespace: nowrap; cursor: pointer; user-select: none; }
+        .styled-table th:hover { background-color: #e2e8f0; }
+        .styled-table td { padding: 12px; border-bottom: 1px solid #e2e8f0; vertical-align: middle; }
+        .styled-table tr:hover { background-color: #f1f5f9; }
+        
+        .input-box { width: 100%; padding: 8px 32px 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; outline: none; transition: border-color 0.2s; }
+        .input-box:focus { border-color: #5B2333; }
+        input[type="search"]::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
+
+        /* 圖表模式專用樣式 */
+        .schedule-grid { display: grid; grid-template-columns: 60px repeat(7, minmax(120px, 1fr)); gap: 1px; background-color: #f1f5f9; }
+        .schedule-cell { background-color: #ffffff; padding: 2px; min-height: 18px; cursor: pointer; transition: background-color 0.2s; }
+        .schedule-cell:hover { background-color: #f8fafc; }
+        .course-block { cursor: pointer; transition: all 0.2s; z-index: 20; padding: 6px; overflow: hidden; font-size: 12px; }
+        .course-block:hover { transform: translateY(-2px); box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="flex h-screen overflow-hidden antialiased">
+
+    <!-- 側邊欄 (電腦版) -->
+    <aside class="hidden md:flex w-64 bg-white border-r border-gray-200 flex-col shadow-lg z-20">
+        <div class="p-6 text-center border-b border-gray-100">
+            <h1 class="text-2xl font-bold text-[#5B2333] tracking-widest font-serif">THE SOMA</h1>
+            <p class="text-xs text-gray-500 mt-1">系統管理中心</p>
+        </div>
+        <nav class="flex-1 p-4 space-y-2 overflow-y-auto">
+            <button onclick="switchTab('dashboard')" class="tab-btn active w-full flex items-center px-4 py-3 rounded-xl text-sm font-medium transition-colors text-gray-600 hover:bg-gray-100" id="btn-dashboard">
+                <iconify-icon icon="ph:chart-line-up-light" class="text-xl mr-3"></iconify-icon> 營運儀表板
+            </button>
+            <button onclick="switchTab('users')" class="tab-btn w-full flex items-center px-4 py-3 rounded-xl text-sm font-medium transition-colors text-gray-600 hover:bg-gray-100" id="btn-users">
+                <iconify-icon icon="ph:users-light" class="text-xl mr-3"></iconify-icon> 學員管理 (Users)
+            </button>
+            <button onclick="switchTab('courses')" class="tab-btn w-full flex items-center px-4 py-3 rounded-xl text-sm font-medium transition-colors text-gray-600 hover:bg-gray-100" id="btn-courses">
+                <iconify-icon icon="ph:book-open-light" class="text-xl mr-3"></iconify-icon> 課程模版 (Courses)
+            </button>
+            <button onclick="switchTab('schedules')" class="tab-btn w-full flex items-center px-4 py-3 rounded-xl text-sm font-medium transition-colors text-gray-600 hover:bg-gray-100" id="btn-schedules">
+                <iconify-icon icon="ph:calendar-check-light" class="text-xl mr-3"></iconify-icon> 梯次排程 (Schedule)
+            </button>
+            <button onclick="switchTab('bookings')" class="tab-btn w-full flex items-center px-4 py-3 rounded-xl text-sm font-medium transition-colors text-gray-600 hover:bg-gray-100" id="btn-bookings">
+                <iconify-icon icon="ph:ticket-light" class="text-xl mr-3"></iconify-icon> 預約紀錄 (Bookings)
+            </button>
+            <button onclick="switchTab('logs')" class="tab-btn w-full flex items-center px-4 py-3 rounded-xl text-sm font-medium transition-colors text-gray-600 hover:bg-gray-100" id="btn-logs">
+                <iconify-icon icon="ph:file-text-light" class="text-xl mr-3"></iconify-icon> 系統日誌 (Logs)
+            </button>
+        </nav>
+        <div class="p-4 border-t border-gray-200">
+            <button onclick="goBack()" class="w-full text-center text-sm text-gray-500 hover:text-[#5B2333]">← 返回預約前台</button>
+        </div>
+    </aside>
+
+    <!-- 手機版底部導覽列 -->
+    <nav class="md:hidden fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 flex justify-around p-2 z-[60] text-[10px] pb-safe shadow-[0_-4px_6px_rgba(0,0,0,0.05)]">
+        <button onclick="switchTab('dashboard')" class="tab-btn-m flex flex-col items-center p-1 text-[#5B2333]" id="m-btn-dashboard">
+            <iconify-icon icon="ph:chart-line-up-light" class="text-xl mb-1"></iconify-icon> 儀表板
+        </button>
+        <button onclick="switchTab('users')" class="tab-btn-m flex flex-col items-center p-1 text-gray-500" id="m-btn-users">
+            <iconify-icon icon="ph:users-light" class="text-xl mb-1"></iconify-icon> 學員
+        </button>
+        <button onclick="switchTab('courses')" class="tab-btn-m flex flex-col items-center p-1 text-gray-500" id="m-btn-courses">
+            <iconify-icon icon="ph:book-open-light" class="text-xl mb-1"></iconify-icon> 課程
+        </button>
+        <button onclick="switchTab('schedules')" class="tab-btn-m flex flex-col items-center p-1 text-gray-500" id="m-btn-schedules">
+            <iconify-icon icon="ph:calendar-check-light" class="text-xl mb-1"></iconify-icon> 梯次
+        </button>
+        <button onclick="switchTab('bookings')" class="tab-btn-m flex flex-col items-center p-1 text-gray-500" id="m-btn-bookings">
+            <iconify-icon icon="ph:ticket-light" class="text-xl mb-1"></iconify-icon> 預約
+        </button>
+        <button onclick="goBack()" class="flex flex-col items-center p-1 text-gray-500">
+            <iconify-icon icon="ph:sign-out-light" class="text-xl mb-1"></iconify-icon> 返回
+        </button>
+    </nav>
+
+    <!-- 主內容區 -->
+    <main class="flex-1 flex flex-col h-screen overflow-hidden bg-gray-50 relative pb-16 md:pb-0">
+        <header class="bg-white border-b border-gray-200 px-4 md:px-8 py-4 flex justify-between items-center z-10">
+            <h2 class="text-lg md:text-xl font-bold text-gray-800" id="top-title">營運儀表板</h2>
+            <button onclick="loadAllData()" class="text-xs md:text-sm bg-gray-100 text-gray-600 px-3 md:px-4 py-2 rounded-lg hover:bg-gray-200 transition flex items-center">
+                <iconify-icon icon="ph:arrows-clockwise" class="mr-1"></iconify-icon> <span class="hidden md:inline">重新整理</span>
+            </button>
+        </header>
+
+        <div class="flex-1 overflow-auto p-4 md:p-8 relative">
+            
+            <div id="loading" class="absolute inset-0 bg-white/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center">
+                <iconify-icon icon="eos-icons:bubble-loading" class="text-5xl text-[#5B2333] mb-4"></iconify-icon>
+                <p class="font-bold tracking-widest text-gray-600" id="loading-text">同步雲端資料庫中...</p>
+            </div>
+
+            <!-- 1. 儀表板 -->
+            <div id="tab-dashboard" class="tab-content active space-y-6">
+                <div class="flex justify-between items-end mb-2">
+                    <p class="text-sm font-bold text-gray-500">選擇分析月份：</p>
+                    <input type="month" id="dash-month-picker" class="input-box w-auto font-bold text-[#5B2333] shadow-sm" onchange="renderDashboard()">
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center">
+                        <div class="w-12 h-12 md:w-14 md:h-14 rounded-full bg-red-50 text-red-600 flex items-center justify-center text-xl md:text-2xl mr-4"><iconify-icon icon="ph:coin-vertical-fill"></iconify-icon></div>
+                        <div>
+                            <p class="text-xs md:text-sm text-gray-500 mb-1 font-bold">該月已核銷總收益 (點數)</p>
+                            <p class="text-2xl md:text-3xl font-bold text-gray-800" id="dash-month-points">0</p>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center">
+                        <div class="w-12 h-12 md:w-14 md:h-14 rounded-full bg-green-50 text-green-600 flex items-center justify-center text-xl md:text-2xl mr-4"><iconify-icon icon="ph:calendar-check-fill"></iconify-icon></div>
+                        <div>
+                            <p class="text-xs md:text-sm text-gray-500 mb-1 font-bold">該月總排程梯次</p>
+                            <p class="text-2xl md:text-3xl font-bold text-gray-800" id="dash-schedules">0</p>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center">
+                        <div class="w-12 h-12 md:w-14 md:h-14 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-xl md:text-2xl mr-4"><iconify-icon icon="ph:users-fill"></iconify-icon></div>
+                        <div>
+                            <p class="text-xs md:text-sm text-gray-500 mb-1 font-bold">系統總註冊人數</p>
+                            <p class="text-2xl md:text-3xl font-bold text-gray-800" id="dash-users">0</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mt-8">
+                    <div class="p-4 border-b border-gray-100 bg-gray-50"><h3 class="font-bold text-gray-800">師資排程與預計營收 (依所選月份)</h3></div>
+                    <div class="overflow-x-auto"><table class="w-full text-sm styled-table" id="table-dash-teachers"></table></div>
+                </div>
+            </div>
+
+            <!-- 2. 學員管理 -->
+            <div id="tab-users" class="tab-content bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <div class="p-4 border-b border-gray-100 bg-gray-50 flex flex-wrap items-center gap-3">
+                    <label class="text-sm font-bold text-gray-600">身分篩選：</label>
+                    <select id="filter-u-role" class="input-box w-auto text-sm py-1.5" onchange="renderUsers()">
+                        <option value="all">顯示所有身分</option>
+                        <option value="teacher">老師 (Teacher)</option>
+                        <option value="student">學員 (Student)</option>
+                        <option value="admin">管理員 (Admin)</option>
+                    </select>
+                </div>
+                <div class="overflow-x-auto"><table class="w-full text-sm styled-table" id="table-users"></table></div>
+            </div>
+
+            <!-- 3. 課程模版 -->
+            <div id="tab-courses" class="tab-content bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden h-full">
+                <div class="flex flex-col h-full">
+                    <div class="p-4 border-b border-gray-100 flex justify-end shrink-0">
+                        <button onclick="openCourseModal()" class="bg-[#5B2333] text-white px-4 py-2 rounded-lg text-xs md:text-sm font-bold flex items-center hover:bg-opacity-90 shadow-md"><iconify-icon icon="ph:plus-bold" class="mr-1"></iconify-icon> 新增課程</button>
+                    </div>
+                    <div class="overflow-x-auto flex-1"><table class="w-full text-sm styled-table" id="table-courses"></table></div>
+                    <div id="pg-courses" class="p-3 bg-gray-50 border-t border-gray-200 flex justify-center items-center gap-4 text-sm shrink-0"></div>
+                </div>
+            </div>
+
+            <!-- 4. 梯次排程 -->
+            <div id="tab-schedules" class="tab-content bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden h-full">
+                <div class="flex flex-col h-full relative">
+                    <div class="p-4 border-b border-gray-100 flex flex-col md:flex-row justify-between items-start md:items-center shrink-0 gap-3 z-10 bg-white shadow-sm relative">
+                        <div class="flex flex-wrap gap-2 items-center w-full md:w-auto">
+                            <span class="text-sm font-bold text-gray-600 hidden md:inline">篩選條件：</span>
+                            <input type="date" id="filter-s-date" class="input-box w-auto text-xs py-1.5" onchange="renderSchedules()">
+                            <input type="text" id="filter-s-keyword" class="input-box w-auto text-xs py-1.5" placeholder="搜尋老師/地點 (可用@隔開)" onkeyup="renderSchedules()">
+                            <button onclick="document.getElementById('filter-s-date').value=''; document.getElementById('filter-s-keyword').value=''; renderSchedules()" class="text-xs bg-gray-200 px-3 py-1.5 rounded hover:bg-gray-300">清除</button>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="toggleAdminScheduleView()" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-xs md:text-sm font-bold flex items-center hover:bg-gray-200 shadow-sm whitespace-nowrap transition-colors border border-gray-200" id="btn-toggle-s-view">
+                                <iconify-icon icon="ph:calendar-blank" class="mr-1 text-lg"></iconify-icon> <span id="text-toggle-s-view">切換圖表模式</span>
+                            </button>
+                            <button onclick="openScheduleModal()" class="bg-[#5B2333] text-white px-4 py-2 rounded-lg text-xs md:text-sm font-bold flex items-center hover:bg-opacity-90 shadow-md whitespace-nowrap"><iconify-icon icon="ph:plus-bold" class="mr-1"></iconify-icon> 新增開課梯次</button>
+                        </div>
+                    </div>
+                    
+                    <!-- 列表模式 -->
+                    <div id="admin-schedule-list-view" class="flex-1 flex flex-col overflow-hidden">
+                        <div class="overflow-x-auto flex-1"><table class="w-full text-sm styled-table" id="table-schedules"></table></div>
+                        <div id="pg-schedules" class="p-3 bg-gray-50 border-t border-gray-200 flex justify-center items-center gap-4 text-sm shrink-0"></div>
+                    </div>
+
+                    <!-- 圖表模式 (視覺化課表) -->
+                    <div id="admin-schedule-grid-view" class="hidden flex-1 flex-col overflow-hidden bg-gray-50/50">
+                        <div class="flex flex-col md:flex-row justify-between items-center p-3 bg-white border-b border-gray-200 shrink-0 shadow-sm relative z-20 gap-3">
+                            <div class="flex items-center gap-4">
+                                <button class="p-1.5 rounded hover:bg-gray-200 transition-colors" onclick="adminChangeWeek(-1)"><iconify-icon icon="ph:caret-left-bold" class="text-xl text-gray-600"></iconify-icon></button>
+                                <h3 class="text-sm font-bold tracking-wider text-[#5B2333]" id="admin-week-label">讀取中...</h3>
+                                <button class="p-1.5 rounded hover:bg-gray-200 transition-colors" onclick="adminChangeWeek(1)"><iconify-icon icon="ph:caret-right-bold" class="text-xl text-gray-600"></iconify-icon></button>
+                            </div>
+                            
+                            <button onclick="copyCurrentMonthToNext()" class="bg-amber-100 text-amber-800 px-4 py-2 rounded-lg text-xs font-bold hover:bg-amber-200 transition shadow-sm border border-amber-200 flex items-center">
+                                <iconify-icon icon="ph:copy-bold" class="mr-1 text-lg"></iconify-icon> 本月課表複製至次月
+                            </button>
+                        </div>
+                        <div class="overflow-x-auto overflow-y-auto no-scrollbar relative flex-1 p-2 md:p-4 h-full">
+                            <div class="w-max min-w-full bg-white border border-gray-200 rounded-xl shadow-sm relative">
+                                <div id="admin-schedule-header" class="grid grid-cols-[60px_repeat(7,minmax(120px,1fr))] bg-gray-100 text-gray-700 text-center text-xs font-bold py-2 border-b border-gray-200 sticky top-0 z-40"></div>
+                                <div id="admin-schedule-body" class="schedule-grid font-sans text-xs text-gray-800 relative z-10 pb-4"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- 5. 預約紀錄 -->
+            <div id="tab-bookings" class="tab-content bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <div class="overflow-x-auto"><table class="w-full text-sm styled-table" id="table-bookings"></table></div>
+            </div>
+
+            <!-- 6. 系統日誌 -->
+            <div id="tab-logs" class="tab-content bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <div class="overflow-x-auto"><table class="w-full text-sm styled-table" id="table-logs"></table></div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modals -->
+    <div id="modal-user" class="fixed inset-0 bg-black/60 z-[100] hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-md relative shadow-2xl max-h-[90vh] overflow-y-auto">
+            <h3 class="text-lg font-bold text-[#5B2333] mb-4">編輯學員/師資資訊</h3>
+            <form id="form-user" onsubmit="return saveUser(event)" class="space-y-3 text-sm">
+                <input type="hidden" id="u-phone-hidden">
+                <div>
+                    <label class="block text-gray-600 mb-1">姓名</label>
+                    <div class="relative flex items-center">
+                        <input type="search" id="u-name" class="input-box peer" required oninput="toggleX(this)">
+                        <iconify-icon icon="ph:x-circle-fill" class="absolute right-2 text-gray-400 cursor-pointer hidden peer-focus:text-[#5B2333]" onclick="clearInp('u-name')"></iconify-icon>
+                    </div>
+                </div>
+                <div><label class="block text-gray-600 mb-1">電話 (不可修改)</label><input type="text" id="u-phone" class="input-box bg-gray-100" readonly></div>
+                <div>
+                    <label class="block text-gray-600 mb-1">信箱</label>
+                    <div class="relative flex items-center">
+                        <input type="email" id="u-email" class="input-box peer" oninput="toggleX(this)">
+                        <iconify-icon icon="ph:x-circle-fill" class="absolute right-2 text-gray-400 cursor-pointer hidden peer-focus:text-[#5B2333]" onclick="clearInp('u-email')"></iconify-icon>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div><label class="block text-gray-600 mb-1 font-bold text-burgundy">會員等級</label>
+                        <select id="u-tier" class="input-box border-burgundy">
+                            <option value="正式">正式 (原價)</option>
+                            <option value="銀卡">銀卡 (95折)</option>
+                            <option value="金卡">金卡 (9折)</option>
+                            <option value="鑽石">鑽石 (8折)</option>
+                        </select>
+                    </div>
+                    <div><label class="block text-gray-600 mb-1">點數餘額</label><input type="number" id="u-points" class="input-box" required></div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-gray-600 mb-1">到期日</label>
+                        <input type="date" id="u-expire" class="input-box">
+                    </div>
+                    <div>
+                        <label class="block text-gray-600 mb-1">當月取消次數</label>
+                        <div class="flex gap-1">
+                            <input type="number" id="u-cancel-count" class="input-box w-full" value="0" required>
+                            <button type="button" onclick="document.getElementById('u-cancel-count').value=0" class="bg-gray-200 text-gray-600 px-2 rounded hover:bg-gray-300 text-xs">清空</button>
+                        </div>
+                    </div>
+                </div>
+                <div><label class="block text-gray-600 mb-1 mt-2 border-t border-gray-100 pt-2">系統權限</label>
+                    <select id="u-role" class="input-box" onchange="toggleTeacherFields()">
+                        <option value="student">學員 (student)</option>
+                        <option value="teacher">老師 (teacher)</option>
+                        <option value="admin">管理員 (admin)</option>
+                    </select>
+                </div>
+                <div id="teacher-fields" class="hidden space-y-3 p-3 bg-gray-50 border border-gray-200 rounded mt-2">
+                    <p class="text-xs font-bold text-[#5B2333]">⭐ 師資專屬設定</p>
+                    <div><label class="block text-gray-600 mb-1 text-xs">師資介紹</label><textarea id="u-intro" class="input-box h-16 text-xs"></textarea></div>
+                    <div><label class="block text-gray-600 mb-1 text-xs">頭像網址 (如 Imgur)</label><input type="text" id="u-avatar" class="input-box text-xs"></div>
+                </div>
+
+                <div class="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 relative z-10">
+                    <button type="button" onclick="closeModal('modal-user')" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg cursor-pointer">取消</button>
+                    <button type="submit" class="px-4 py-2 bg-[#5B2333] text-white rounded-lg font-bold shadow-md cursor-pointer">儲存變更</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="modal-course" class="fixed inset-0 bg-black/60 z-[100] hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-md relative shadow-2xl max-h-[90vh] overflow-y-auto">
+            <h3 class="text-lg font-bold text-[#5B2333] mb-4" id="c-title">新增/編輯課程</h3>
+            <form id="form-course" onsubmit="return saveCourse(event)" class="space-y-3 text-sm">
+                <input type="hidden" id="c-id-hidden">
+                <div>
+                    <label class="block text-gray-600 mb-1">課程名稱</label>
+                    <div class="relative flex items-center">
+                        <input type="search" id="c-name" class="input-box peer" required oninput="toggleX(this)">
+                        <iconify-icon icon="ph:x-circle-fill" class="absolute right-2 text-gray-400 cursor-pointer hidden peer-focus:text-[#5B2333]" onclick="clearInp('c-name')"></iconify-icon>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-gray-600 mb-1">指導老師</label>
+                    <div class="relative flex items-center">
+                        <input type="search" id="c-teacher" class="input-box peer" required oninput="toggleX(this)">
+                        <iconify-icon icon="ph:x-circle-fill" class="absolute right-2 text-gray-400 cursor-pointer hidden peer-focus:text-[#5B2333]" onclick="clearInp('c-teacher')"></iconify-icon>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-gray-600 mb-1">上課地點</label>
+                    <div class="relative flex items-center">
+                        <input type="search" id="c-location" class="input-box peer" required oninput="toggleX(this)">
+                        <iconify-icon icon="ph:x-circle-fill" class="absolute right-2 text-gray-400 cursor-pointer hidden peer-focus:text-[#5B2333]" onclick="clearInp('c-location')"></iconify-icon>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div><label class="block text-gray-600 mb-1">扣點</label><input type="number" id="c-cost" class="input-box" required></div>
+                    <div><label class="block text-gray-600 mb-1">人數上限</label><input type="number" id="c-cap" class="input-box" required></div>
+                </div>
+                <div><label class="block text-gray-600 mb-1">課程簡介</label><textarea id="c-intro-course" class="input-box h-16 p-2"></textarea></div>
+                <div><label class="block text-gray-600 mb-1">開放預約</label>
+                    <select id="c-open" class="input-box"><option value="TRUE">是</option><option value="FALSE">否</option></select>
+                </div>
+                <div class="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 relative z-10">
+                    <button type="button" onclick="closeModal('modal-course')" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg cursor-pointer">取消</button>
+                    <button type="submit" class="px-4 py-2 bg-[#5B2333] text-white rounded-lg font-bold shadow-md cursor-pointer">儲存變更</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 梯次彈窗 -->
+    <div id="modal-schedule" class="fixed inset-0 bg-black/60 z-[100] hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-md relative shadow-2xl max-h-[90vh] overflow-y-auto">
+            <h3 class="text-lg font-bold text-[#5B2333] mb-4" id="s-title">新增/編輯梯次</h3>
+            <form id="form-schedule" onsubmit="return saveSchedule(event)" class="space-y-3 text-sm">
+                <input type="hidden" id="s-id-hidden">
+                <div><label class="block text-gray-600 mb-1">選擇課程</label><select id="s-course" class="input-box" required></select></div>
+                <div>
+                    <label class="block text-gray-600 mb-1">日期 (點擊月曆)</label>
+                    <input type="date" id="s-date" class="input-box" required>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div><label class="block text-gray-600 mb-1">開始時間</label>
+                        <select id="s-time" class="input-box" required></select>
+                    </div>
+                    <div><label class="block text-gray-600 mb-1">佔用時間 (分鐘)</label><input type="number" id="s-duration" class="input-box" value="60" step="10" required></div>
+                </div>
+                <div><label class="block text-gray-600 mb-1">是否已完課</label>
+                    <select id="s-completed" class="input-box"><option value="FALSE">否</option><option value="TRUE">是</option></select>
+                </div>
+                
+                <div id="s-batch-group" class="border-t border-gray-100 pt-3 mt-3 hidden">
+                    <label class="flex items-center text-gray-600 cursor-pointer">
+                        <input type="checkbox" id="s-batch-month" class="mr-2 w-4 h-4 text-[#5B2333] rounded focus:ring-[#5B2333]">
+                        <span class="font-bold text-[#5B2333] text-xs md:text-sm">排滿本月每周相同課程</span>
+                    </label>
+                </div>
+
+                <div class="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 relative z-10 flex-wrap">
+                    <div class="flex gap-2 mr-auto">
+                        <button type="button" id="btn-s-delete" onclick="handleAdminModalDelete()" class="hidden px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-bold hover:bg-red-700 transition shadow-md cursor-pointer flex items-center">
+                            <iconify-icon icon="ph:trash-bold" class="mr-1"></iconify-icon> 刪除
+                        </button>
+                        <button type="button" id="btn-s-copy" onclick="handleAdminModalCopy()" class="hidden px-4 py-2 bg-green-50 text-green-700 rounded-lg text-sm font-bold hover:bg-green-100 transition shadow-sm cursor-pointer">複製</button>
+                    </div>
+                    <button type="button" onclick="closeModal('modal-schedule')" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg cursor-pointer">取消</button>
+                    <button type="submit" class="px-4 py-2 bg-[#5B2333] text-white rounded-lg font-bold shadow-md cursor-pointer">儲存變更</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 超神複製 Modal -->
+    <div id="modal-copy" class="fixed inset-0 bg-black/60 z-[100] hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-md relative shadow-2xl max-h-[90vh] overflow-y-auto">
+            <h3 class="text-lg font-bold text-[#5B2333] mb-4">複製排程至多個日期</h3>
+            <div class="space-y-3 text-sm">
+                <div class="p-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-700">
+                    <p class="font-bold mb-1">來源課程：<span id="copy-course-name" class="text-[#5B2333]"></span></p>
+                    <p>原本時間：<span id="copy-time-info"></span></p>
+                </div>
+                
+                <div>
+                    <label class="block text-gray-600 mb-1 font-bold">1. 手點選加入日期：</label>
+                    <div class="flex gap-2">
+                        <input type="date" id="copy-date-picker" class="input-box flex-1">
+                        <button type="button" onclick="addCopyDate()" class="bg-gray-800 text-white px-4 py-2 rounded-lg font-bold hover:bg-black transition whitespace-nowrap cursor-pointer">加入</button>
+                    </div>
+                </div>
+
+                <div class="border-t border-gray-100 pt-3">
+                    <label class="block text-[#5B2333] mb-1 font-bold">🌟 快速加入整月 (同星期)：</label>
+                    <div class="flex gap-2">
+                        <input type="month" id="copy-month-picker" class="input-box flex-1 border-[#5B2333]">
+                        <button type="button" onclick="addMonthCopy()" class="bg-[#5B2333] text-white px-4 py-2 rounded-lg font-bold hover:bg-opacity-90 transition whitespace-nowrap cursor-pointer">一鍵加整月</button>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-gray-600 mb-1 font-bold mt-2">即將複製到以下日期：</label>
+                    <div id="copy-date-list" class="flex flex-wrap gap-2 min-h-[50px] p-2 border border-dashed border-gray-300 rounded-lg"></div>
+                </div>
+
+                <div class="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 relative z-10">
+                    <button type="button" onclick="closeModal('modal-copy')" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg cursor-pointer">取消</button>
+                    <button type="button" onclick="executeBatchCopy()" class="px-4 py-2 bg-green-700 text-white rounded-lg font-bold shadow-md hover:bg-green-800 transition flex items-center cursor-pointer">
+                        <iconify-icon icon="ph:copy-fill" class="mr-1"></iconify-icon> 確定大量複製
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        var db = { users: [], courses: [], schedules: [], bookings: [], logs: [] };
+        var sourceScheduleForCopy = null;
+        var selectedCopyDates = new Set();
+
+        var tbState = {
+            courses: { page: 1, sortCol: '課程編號', sortAsc: true },
+            schedules: { page: 1, sortCol: '日期', sortAsc: false } 
+        };
+
+        var adminWeekStart = new Date();
+        var adminDay = adminWeekStart.getDay();
+        var adminDiff = adminWeekStart.getDate() - adminDay + (adminDay === 0 ? -6 : 1);
+        adminWeekStart.setDate(adminDiff);
+        adminWeekStart.setHours(0,0,0,0);
+        var isAdminGridView = false;
+
+        var urlParams = new URLSearchParams(window.location.search);
+        var currentUserPhone = urlParams.get('uid') || localStorage.getItem('soma_phone');
+        if (currentUserPhone) localStorage.setItem('soma_phone', currentUserPhone);
+        
+        function getNextId(prefix, dbArray, idKey) {
+            var maxNum = 0;
+            dbArray.forEach(function(item) {
+                var idStr = String(item[idKey] || '').trim();
+                var match = idStr.match(new RegExp('^' + prefix + '(\\d{4})$'));
+                if (match) {
+                    var num = parseInt(match[1], 10);
+                    if (num > maxNum) maxNum = num;
+                }
+            });
+            return prefix + String(maxNum + 1).padStart(4, '0');
+        }
+
+        function toggleX(inputEl) {
+            var icon = inputEl.nextElementSibling;
+            if(icon && icon.tagName.toLowerCase() === 'iconify-icon') {
+                if(inputEl.value.length > 0) icon.classList.remove('hidden');
+                else icon.classList.add('hidden');
+            }
+        }
+        function clearInp(id) {
+            var el = document.getElementById(id);
+            if(el) { el.value = ''; el.focus(); toggleX(el); }
+        }
+
+        function loadAllData() {
+            if (!currentUserPhone) {
+                alert('安全警告：系統無法識別您的身分。請先至首頁登入管理員帳號！');
+                goBack(); return;
+            }
+            document.getElementById('loading').classList.remove('hidden');
+            
+            if (typeof google !== 'undefined' && typeof google.script !== 'undefined') {
+                google.script.run
+                .withSuccessHandler(function(res) {
+                    if (!res.success) { alert(res.msg); goBack(); return; }
+                    db = res; renderAll(); document.getElementById('loading').classList.add('hidden');
+                })
+                .withFailureHandler(function(err) {
+                    alert('系統連線發生錯誤：\n' + err); document.getElementById('loading').classList.add('hidden');
+                }).getAdminData(currentUserPhone); 
+            } else {
+                alert('安全警告：無法連接到資料庫。請確認您是在 Google Apps Script 環境中執行。');
+                document.getElementById('loading').classList.add('hidden');
+            }
+        }
+
+        window.onload = loadAllData;
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(function(el) { el.classList.remove('active'); });
+            document.querySelectorAll('.tab-btn').forEach(function(el) { el.classList.remove('active'); });
+            document.querySelectorAll('.tab-btn-m').forEach(function(el) { el.classList.remove('text-[#5B2333]'); el.classList.add('text-gray-500'); });
+            
+            document.getElementById('tab-' + tabId).classList.add('active');
+            if(document.getElementById('btn-' + tabId)) document.getElementById('btn-' + tabId).classList.add('active');
+            if(document.getElementById('m-btn-' + tabId)) {
+                document.getElementById('m-btn-' + tabId).classList.remove('text-gray-500'); 
+                document.getElementById('m-btn-' + tabId).classList.add('text-[#5B2333]');
+            }
+            
+            var titles = { dashboard: '營運儀表板', users: '學員管理', courses: '課程模版庫', schedules: '梯次排程', bookings: '預約紀錄', logs: '系統操作日誌' };
+            document.getElementById('top-title').innerText = titles[tabId];
+            
+            if(tabId === 'schedules' && isAdminGridView) {
+                renderAdminScheduleGrid();
+            }
+        }
+
+        function goBack() { window.location.href = window.location.href.split('?')[0]; }
+
+        function getUserName(phone) { var u = db.users.find(function(x) { return String(x['電話']).replace(/^'/, '').trim() == String(phone).replace(/^'/, '').trim(); }); return u ? u['姓名'] : phone; }
+        function getCourseName(cId) { var c = db.courses.find(function(x) { return x['課程編號'] === cId; }); return c ? c['課程名稱'] : cId; }
+        function getCourseCost(cId) { var c = db.courses.find(function(x) { return x['課程編號'] === cId; }); return c ? parseInt(c['扣點']||0) : 0; }
+        
+        function renderAll() {
+            renderDashboard(); renderUsers(); renderCourses(); renderSchedules(); renderBookings(); renderLogs();
+            if (isAdminGridView) renderAdminScheduleGrid();
+            
+            var timeSel = document.getElementById('s-time'); timeSel.innerHTML = '';
+            for(var i=8; i<=22; i++) {
+                for(var m=0; m<60; m+=10) {
+                    if(i===22 && m>0) continue; 
+                    var timeStr = String(i).padStart(2,'0') + ':' + String(m).padStart(2,'0');
+                    timeSel.innerHTML += '<option value="' + timeStr + '">' + timeStr + '</option>';
+                }
+            }
+        }
+
+        function sortTb(type, col) {
+            if(tbState[type].sortCol === col) tbState[type].sortAsc = !tbState[type].sortAsc;
+            else { tbState[type].sortCol = col; tbState[type].sortAsc = true; }
+            tbState[type].page = 1;
+            if(type==='courses') renderCourses();
+            if(type==='schedules') renderSchedules();
+        }
+        function changePage(type, dir) {
+            tbState[type].page += dir;
+            if(type==='courses') renderCourses();
+            if(type==='schedules') renderSchedules();
+        }
+
+        function initDashboardMonth() {
+            if (!document.getElementById('dash-month-picker').value) {
+                var now = new Date();
+                document.getElementById('dash-month-picker').value = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
+            }
+        }
+
+        function renderDashboard() {
+            initDashboardMonth();
+            var selectedMonth = document.getElementById('dash-month-picker').value; 
+            
+            document.getElementById('dash-users').innerText = db.users.length;
+            
+            var monthPoints = 0, monthSchedulesCount = 0;
+            var teacherStats = {};
+
+            db.schedules.forEach(function(s) {
+                var dObj = new Date(String(s['日期']).replace(/-/g, '/'));
+                if (!isNaN(dObj)) {
+                    var sMonth = dObj.getFullYear() + '-' + String(dObj.getMonth()+1).padStart(2,'0');
+                    if (sMonth === selectedMonth) {
+                        monthSchedulesCount++;
+                        var c = db.courses.find(function(x) { return x['課程編號'] === s['課程編號']; });
+                        if (c) {
+                            var tName = c['老師'] || '未知';
+                            var cost = parseInt(c['扣點'] || 0);
+                            var cap = parseInt(c['人數'] || 0);
+                            
+                            if (!teacherStats[tName]) teacherStats[tName] = { count: 0, expectedRev: 0 };
+                            teacherStats[tName].count += 1;
+                            teacherStats[tName].expectedRev += (cost * cap); 
+                        }
+                    }
+                }
+            });
+            
+            db.bookings.forEach(function(b) {
+                if (b['狀態'] === 'Completed') {
+                    var s = db.schedules.find(function(x) { return x['梯次編號'] === b['梯次編號']; });
+                    if(s) {
+                        var dObj = new Date(String(s['日期']).replace(/-/g, '/'));
+                        var sMonth = dObj.getFullYear() + '-' + String(dObj.getMonth()+1).padStart(2,'0');
+                        if(sMonth === selectedMonth) monthPoints += getCourseCost(s['課程編號']);
+                    }
+                }
+            });
+            
+            document.getElementById('dash-month-points').innerText = monthPoints;
+            document.getElementById('dash-schedules').innerText = monthSchedulesCount;
+
+            var tHtml = '<tr><th>指導老師</th><th>排程堂數</th><th>預計最高營收 (點數)</th></tr>';
+            for (var t in teacherStats) {
+                tHtml += '<tr><td class="font-bold text-[#5B2333]">' + t + '</td><td>' + teacherStats[t].count + ' 堂</td><td class="font-mono text-green-700 font-bold">' + teacherStats[t].expectedRev + ' 點</td></tr>';
+            }
+            if (Object.keys(teacherStats).length === 0) {
+                tHtml += '<tr><td colspan="3" class="text-center text-gray-400 py-4">該月份尚無排程資料</td></tr>';
+            }
+            document.getElementById('table-dash-teachers').innerHTML = tHtml;
+        }
+
+        function renderUsers() {
+            var roleFilter = document.getElementById('filter-u-role').value;
+            var filteredUsers = db.users.slice();
+            if (roleFilter !== 'all') {
+                filteredUsers = filteredUsers.filter(function(u) { return String(u['身分']).trim() === roleFilter; });
+            }
+
+            var html = '<tr><th>姓名</th><th>電話</th><th>卡別</th><th>點數</th><th>取消次數</th><th>身分</th><th>操作</th></tr>';
+            filteredUsers.forEach(function(u) {
+                var phoneClean = String(u['電話']).replace(/^'/, '');
+                var tierHTML = u['會員等級'] ? '<span class="text-[#5B2333] font-bold text-xs bg-gray-100 px-2 py-0.5 rounded">' + u['會員等級'] + '</span>' : '正式';
+                html += '<tr><td class="font-bold">' + u['姓名'] + '</td><td class="font-mono text-gray-500">' + phoneClean + '</td>' +
+                        '<td>' + tierHTML + '</td>' +
+                        '<td class="text-[#5B2333] font-bold">' + u['點數'] + '</td>' +
+                        '<td class="text-red-600 font-bold">' + (u['當月取消次數'] || 0) + '</td>' +
+                        '<td><span class="px-2 py-1 bg-gray-100 rounded text-xs">' + u['身分'] + '</span></td>' +
+                        '<td><button onclick="openUserModal(\'' + phoneClean + '\')" class="text-blue-600 hover:underline px-3 py-1 bg-blue-50 rounded">編輯</button></td></tr>';
+            });
+            document.getElementById('table-users').innerHTML = html;
+        }
+
+        function toggleTeacherFields() {
+            var role = document.getElementById('u-role').value;
+            if (role === 'teacher') document.getElementById('teacher-fields').classList.remove('hidden');
+            else document.getElementById('teacher-fields').classList.add('hidden');
+        }
+
+        function openUserModal(phone) {
+            var cleanPhone = String(phone).replace(/^'/, '');
+            var u = db.users.find(function(x) { return String(x['電話']).replace(/^'/, '') == cleanPhone; }); 
+            if(!u) return;
+            
+            document.getElementById('u-phone-hidden').value = cleanPhone; 
+            document.getElementById('u-phone').value = cleanPhone;
+            document.getElementById('u-name').value = u['姓名']; toggleX(document.getElementById('u-name'));
+            document.getElementById('u-email').value = u['信箱'] || ''; toggleX(document.getElementById('u-email'));
+            document.getElementById('u-points').value = u['點數'] || 0; 
+            document.getElementById('u-cancel-count').value = u['當月取消次數'] || 0; 
+            document.getElementById('u-tier').value = u['會員等級'] || '正式';
+            
+            if(u['到期日']) {
+                var d = new Date(String(u['到期日']).replace(/-/g, '/'));
+                if(!isNaN(d)) {
+                    var mm = String(d.getMonth()+1).padStart(2,'0');
+                    var dd = String(d.getDate()).padStart(2,'0');
+                    document.getElementById('u-expire').value = d.getFullYear() + '-' + mm + '-' + dd;
+                }
+            } else {
+                document.getElementById('u-expire').value = '';
+            }
+            
+            document.getElementById('u-role').value = u['身分'] || 'student';
+            document.getElementById('u-intro').value = u['師資介紹'] || '';
+            document.getElementById('u-avatar').value = u['頭像'] || '';
+            toggleTeacherFields();
+
+            document.getElementById('modal-user').classList.remove('hidden');
+        }
+
+        function saveUser(e) {
+            if(e) e.preventDefault();
+            var dateVal = document.getElementById('u-expire').value;
+            var data = {
+                '電話': document.getElementById('u-phone-hidden').value, 
+                '姓名': document.getElementById('u-name').value, 
+                '信箱': document.getElementById('u-email').value, 
+                '點數': document.getElementById('u-points').value, 
+                '到期日': dateVal ? dateVal.replace(/-/g, '/') : '', 
+                '身分': document.getElementById('u-role').value,
+                '當月取消次數': document.getElementById('u-cancel-count').value, 
+                '會員等級': document.getElementById('u-tier').value,
+                '師資介紹': document.getElementById('u-intro').value,
+                '頭像': document.getElementById('u-avatar').value
+            };
+            doSave('Users', data, '電話', false, 'modal-user');
+            return false;
+        }
+
+        function deleteData(sheetName, keyCol, id) {
+            if(!confirm('⚠️ 警告：確定要刪除 [' + id + '] 嗎？此動作無法復原！')) return;
+            document.getElementById('loading').classList.remove('hidden');
+            if (typeof google !== 'undefined' && typeof google.script !== 'undefined') {
+                google.script.run.withSuccessHandler(function(res) {
+                    if(res.success) { loadAllData(); } else { alert(res.msg); document.getElementById('loading').classList.add('hidden'); }
+                }).deleteAdminData(currentUserPhone, sheetName, keyCol, id);
+            }
+        }
+
+        function renderCourses() {
+            var state = tbState.courses;
+            var data = db.courses.slice();
+            
+            data.sort(function(a, b) {
+                var valA = a[state.sortCol] || ''; var valB = b[state.sortCol] || '';
+                if (!isNaN(valA) && !isNaN(valB)) return state.sortAsc ? Number(valA) - Number(valB) : Number(valB) - Number(valA);
+                return state.sortAsc ? String(valA).localeCompare(String(valB)) : String(valB).localeCompare(String(valA));
+            });
+
+            var totalPages = Math.ceil(data.length / 10) || 1;
+            if(state.page > totalPages) state.page = totalPages;
+            if(state.page < 1) state.page = 1;
+            var pagedData = data.slice((state.page - 1) * 10, state.page * 10);
+
+            var th = function(label, col) { return '<th onclick="sortTb(\'courses\', \'' + col + '\')">' + label + ' <span class="text-xs text-gray-400">' + (state.sortCol===col ? (state.sortAsc?'▲':'▼') : '↕') + '</span></th>'; };
+            
+            var html = '<tr>' + th('編號','課程編號') + th('課程名稱','課程名稱') + th('老師','老師') + th('地點','地點') + th('扣點','扣點') + th('人數','人數') + th('開放','開放預約') + '<th>操作</th></tr>'; 
+            pagedData.forEach(function(c) {
+                var openText = String(c['開放預約']).toUpperCase() === 'FALSE' ? '<span class="text-red-500">否</span>':'<span class="text-green-500">是</span>';
+                html += '<tr>' +
+                        '<td class="font-mono text-xs text-gray-400">' + c['課程編號'] + '</td><td class="font-bold">' + c['課程名稱'] + '</td>' +
+                        '<td>' + c['老師'] + '</td><td>' + c['地點'] + '</td><td class="text-[#5B2333] font-bold">' + c['扣點'] + '</td><td>' + c['人數'] + '</td>' +
+                        '<td>' + openText + '</td>' +
+                        '<td><div class="flex gap-2"><button onclick="openCourseModal(\'' + c['課程編號'] + '\')" class="text-blue-600 hover:underline px-3 py-1 bg-blue-50 rounded">編輯</button>' +
+                        '<button onclick="deleteData(\'Courses\', \'課程編號\', \'' + c['課程編號'] + '\')" class="text-red-600 hover:underline px-3 py-1 bg-red-50 rounded">刪除</button></div></td></tr>';
+            });
+            
+            document.getElementById('table-courses').innerHTML = html;
+            document.getElementById('pg-courses').innerHTML = '<button onclick="changePage(\'courses\', -1)" class="px-3 py-1 bg-white border border-gray-300 rounded hover:bg-gray-100" ' + (state.page===1?'disabled':'') + '>上一頁</button>' +
+                '<span class="font-bold">第 ' + state.page + ' / ' + totalPages + ' 頁</span>' +
+                '<button onclick="changePage(\'courses\', 1)" class="px-3 py-1 bg-white border border-gray-300 rounded hover:bg-gray-100" ' + (state.page===totalPages?'disabled':'') + '>下一頁</button>';
+        }
+
+        function openCourseModal(id) {
+            id = id || '';
+            document.getElementById('c-id-hidden').value = id;
+            if(id) {
+                document.getElementById('c-title').innerText = '編輯課程';
+                var c = db.courses.find(function(x) { return x['課程編號'] === id; });
+                document.getElementById('c-name').value = c['課程名稱']; toggleX(document.getElementById('c-name'));
+                document.getElementById('c-teacher').value = c['老師']; toggleX(document.getElementById('c-teacher'));
+                document.getElementById('c-location').value = c['地點']; toggleX(document.getElementById('c-location'));
+                document.getElementById('c-cost').value = c['扣點']; document.getElementById('c-cap').value = c['人數']; 
+                document.getElementById('c-intro-course').value = c['簡介'] || ''; document.getElementById('c-open').value = c['開放預約'] || 'TRUE';
+            } else {
+                document.getElementById('c-title').innerText = '新增課程'; document.getElementById('form-course').reset();
+                toggleX(document.getElementById('c-name')); toggleX(document.getElementById('c-teacher')); toggleX(document.getElementById('c-location'));
+            }
+            document.getElementById('modal-course').classList.remove('hidden');
+        }
+
+        function saveCourse(e) {
+            if(e) e.preventDefault();
+            var id = document.getElementById('c-id-hidden').value;
+            var isNew = !id; 
+            if (isNew) id = getNextId('C', db.courses, '課程編號');
+            var data = {
+                '課程編號': id, '課程名稱': document.getElementById('c-name').value, '老師': document.getElementById('c-teacher').value,
+                '地點': document.getElementById('c-location').value, '扣點': document.getElementById('c-cost').value,
+                '人數': document.getElementById('c-cap').value, '簡介': document.getElementById('c-intro-course').value, '開放預約': document.getElementById('c-open').value
+            };
+            doSave('Courses', data, '課程編號', isNew, 'modal-course');
+            return false;
+        }
+
+        function toggleAdminScheduleView() {
+            isAdminGridView = !isAdminGridView;
+            if (isAdminGridView) {
+                document.getElementById('admin-schedule-list-view').classList.add('hidden');
+                document.getElementById('admin-schedule-grid-view').classList.remove('hidden');
+                document.getElementById('admin-schedule-grid-view').classList.add('flex');
+                document.getElementById('text-toggle-s-view').innerText = '切換列表模式';
+                renderAdminScheduleGrid();
+            } else {
+                document.getElementById('admin-schedule-grid-view').classList.add('hidden');
+                document.getElementById('admin-schedule-grid-view').classList.remove('flex');
+                document.getElementById('admin-schedule-list-view').classList.remove('hidden');
+                document.getElementById('text-toggle-s-view').innerText = '切換圖表模式';
+            }
+        }
+
+        function adminChangeWeek(dir) {
+            adminWeekStart.setDate(adminWeekStart.getDate() + (dir * 7));
+            renderAdminScheduleGrid();
+        }
+
+        function renderAdminScheduleGrid() {
+            var body = document.getElementById('admin-schedule-body');
+            var header = document.getElementById('admin-schedule-header');
+            if (!body || !header) return;
+            
+            body.innerHTML = ''; header.innerHTML = '';
+            
+            var endOfWeek = new Date(adminWeekStart); 
+            endOfWeek.setDate(adminWeekStart.getDate() + 6); 
+            endOfWeek.setHours(23,59,59,999);
+            
+            var sm = String(adminWeekStart.getMonth()+1).padStart(2,'0');
+            var sd = String(adminWeekStart.getDate()).padStart(2,'0');
+            var em = String(endOfWeek.getMonth()+1).padStart(2,'0');
+            var ed = String(endOfWeek.getDate()).padStart(2,'0');
+            document.getElementById('admin-week-label').innerText = adminWeekStart.getFullYear() + '/' + sm + '/' + sd + ' - ' + endOfWeek.getFullYear() + '/' + em + '/' + ed;
+
+            var headerHTML = '<div class="flex items-center justify-center sticky left-0 top-0 bg-gray-100 z-[50] w-[60px] border-r border-gray-200 shadow-[2px_0_5px_rgba(0,0,0,0.05)]">時間</div>';
+            var dayNames = ['週一', '週二', '週三', '週四', '週五', '週六', '週日'];
+            
+            var weekDates = [];
+            for(var i=0; i<7; i++) {
+                var d = new Date(adminWeekStart); d.setDate(adminWeekStart.getDate() + i);
+                var fm = String(d.getMonth()+1).padStart(2,'0');
+                var fd = String(d.getDate()).padStart(2,'0');
+                var dateStr = d.getFullYear() + '/' + fm + '/' + fd;
+                weekDates.push(dateStr);
+                headerHTML += '<div class="flex flex-col items-center justify-center leading-tight border-r border-gray-200 last:border-0 sticky top-0 bg-gray-100 z-40">' +
+                              '<span>' + dayNames[i] + '</span><span class="text-[10px] text-gray-500 mt-0.5 font-normal">' + fm + '/' + fd + '</span></div>';
+            }
+            header.innerHTML = headerHTML;
+
+            var tSlots = [];
+            for (var h = 8; h <= 22; h++) {
+                for (var m = 0; m < 60; m += 10) {
+                    if(h===22 && m>0) continue;
+                    tSlots.push(String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0'));
+                }
+            }
+
+            tSlots.forEach(function(time, index) {
+                var timeCell = document.createElement('div');
+                timeCell.className = 'bg-white flex items-center justify-center border-r border-b border-gray-200 text-gray-500 sticky left-0 z-[30] shadow-[2px_0_5px_rgba(0,0,0,0.02)] w-[60px]';
+                if (time.endsWith(':00')) {
+                    timeCell.innerText = time;
+                    timeCell.classList.add('font-bold', 'text-xs');
+                } else if (time.endsWith(':30')) {
+                    timeCell.innerText = time;
+                    timeCell.classList.add('text-[10px]', 'opacity-50');
+                } else {
+                    timeCell.innerText = '';
+                }
+                timeCell.style.gridRow = (index + 1) + ' / ' + (index + 2); 
+                timeCell.style.gridColumn = '1 / 2';
+                body.appendChild(timeCell);
+
+                for (var d = 1; d <= 7; d++) {
+                    var cell = document.createElement('div');
+                    cell.className = 'schedule-cell border-b border-r border-gray-200 relative z-0';
+                    cell.style.gridRow = (index + 1) + ' / ' + (index + 2); 
+                    cell.style.gridColumn = (d + 1) + ' / ' + (d + 2);
+                    
+                    var cb = function(wDate, tStr) {
+                        return function() { openScheduleModal('', wDate.replace(/\//g, '-'), tStr); };
+                    }(weekDates[d-1], time);
+                    cell.onclick = cb;
+                    
+                    body.appendChild(cell);
+                }
+            });
+
+            db.schedules.forEach(function(inst) {
+                if (!inst['日期'] || !inst['時間']) return; 
+                var instDate = new Date(String(inst['日期']).replace(/-/g, '/')); 
+                instDate.setHours(0,0,0,0);
+                if (instDate.getTime() < adminWeekStart.getTime() || instDate.getTime() > endOfWeek.getTime()) return;
+
+                var course = db.courses.find(function(x) { return x['課程編號'] === inst['課程編號']; });
+                if (!course) return;
+
+                var startTime = String(inst['時間']).trim();
+                var startIndex = tSlots.indexOf(startTime);
+                if (startIndex === -1 && startTime) {
+                    var parts = String(startTime).split(':');
+                    if (parts.length >= 2) {
+                        var h = parseInt(parts[0]);
+                        var m = parseInt(parts[1]);
+                        if (!isNaN(h) && !isNaN(m)) {
+                            var baseMin = Math.floor(m / 10) * 10;
+                            var fallbackTime = String(h).padStart(2, '0') + ':' + String(baseMin).padStart(2, '0');
+                            startIndex = tSlots.indexOf(fallbackTime);
+                        }
+                    }
+                }
+                if (startIndex === -1) return;
+
+                var durVal = parseInt(inst['佔用時段'] || 60);
+                if (durVal <= 24) durVal = durVal * 10; 
+                var rowSpan = Math.ceil(durVal / 10); 
+                var day = parseInt(inst['星期'] || 1);
+
+                var block = document.createElement('div');
+                block.className = 'course-block absolute inset-[1px] rounded bg-[#5B2333] text-white flex flex-col justify-center shadow-md border border-[#4a1c29] pointer-events-auto';
+                
+                var wrapper = document.createElement('div');
+                wrapper.style.gridRow = (startIndex + 1) + ' / ' + (startIndex + 1 + rowSpan); 
+                wrapper.style.gridColumn = (day + 1) + ' / ' + (day + 2);
+                wrapper.className = 'relative p-0.5 pointer-events-none z-10'; 
+
+                block.innerHTML = '<div class="pointer-events-none text-center px-1">' +
+                                  '<p class="font-bold leading-tight truncate text-xs">' + course['課程名稱'] + '</p>' +
+                                  '<p class="text-[10px] mt-0.5 text-white/80 truncate">' + startTime + ' | ' + course['老師'] + '</p>' +
+                                  '<p class="text-[10px] text-white/60 truncate">' + (course['地點'] || '') + '</p></div>';
+                
+                block.onclick = function(e) {
+                    e.stopPropagation();
+                    openScheduleModal(inst['梯次編號']);
+                };
+                
+                wrapper.appendChild(block); body.appendChild(wrapper);
+            });
+        }
+
+        function copyCurrentMonthToNext() {
+            var baseMonth = adminWeekStart.getMonth();
+            var baseYear = adminWeekStart.getFullYear();
+            
+            var monthSchedules = db.schedules.filter(function(s) {
+                var d = new Date(String(s['日期']).replace(/-/g, '/'));
+                return d.getMonth() === baseMonth && d.getFullYear() === baseYear;
+            });
+
+            if (monthSchedules.length === 0) {
+                alert('目前 ' + baseYear + '/' + (baseMonth + 1) + ' 月份尚無任何排程資料。');
+                return;
+            }
+
+            var nextMonth = (baseMonth + 1) % 12;
+            var nextYear = baseYear + (baseMonth === 11 ? 1 : 0);
+
+            if (!confirm('確定要將 ' + baseYear + '/' + (baseMonth + 1) + ' 月的所有課程（共 ' + monthSchedules.length + ' 堂），\n原封不動地複製到下個月（' + nextYear + '/' + (nextMonth + 1) + ' 月）嗎？')) return;
+
+            document.getElementById('loading-text').innerText = '正在智慧複製整月課表...';
+            document.getElementById('loading').classList.remove('hidden');
+
+            var targetDates = [];
+            var dObj = new Date(nextYear, nextMonth, 1);
+            while (dObj.getMonth() === nextMonth) {
+                targetDates.push(new Date(dObj));
+                dObj.setDate(dObj.getDate() + 1);
+            }
+
+            var maxNum = 0;
+            db.schedules.forEach(function(item) {
+                var m = String(item['梯次編號'] || '').match(/^I(\d{4})$/);
+                if (m) maxNum = Math.max(maxNum, parseInt(m[1]));
+            });
+
+            var newSchedules = [];
+            monthSchedules.forEach(function(source) {
+                var sourceWeekday = parseInt(source['星期']);
+                var sourceDate = new Date(String(source['日期']).replace(/-/g, '/'));
+                
+                targetDates.forEach(function(targetDate) {
+                    var targetWeekday = targetDate.getDay(); if(targetWeekday === 0) targetWeekday = 7;
+                    
+                    var sourceWeekOfMonth = Math.ceil(sourceDate.getDate() / 7);
+                    var targetWeekOfMonth = Math.ceil(targetDate.getDate() / 7);
+
+                    if (targetWeekday === sourceWeekday && targetWeekOfMonth === sourceWeekOfMonth) {
+                        var dateStr = targetDate.getFullYear() + '/' + String(targetDate.getMonth()+1).padStart(2,'0') + '/' + String(targetDate.getDate()).padStart(2,'0');
+                        var newObj = JSON.parse(JSON.stringify(source));
+                        newObj['日期'] = dateStr;
+                        newSchedules.push(newObj);
+                    }
+                });
+            });
+
+            if (typeof google !== 'undefined' && typeof google.script !== 'undefined') {
+                var currentIdx = 0;
+                function processNext() {
+                    if (currentIdx >= newSchedules.length) {
+                        loadAllData();
+                        return;
+                    }
+                    
+                    var data = newSchedules[currentIdx];
+                    data['梯次編號'] = 'I' + String(maxNum + currentIdx + 1).padStart(4, '0');
+                    data['是否完課'] = 'FALSE';
+
+                    google.script.run.withSuccessHandler(function(res) {
+                        currentIdx++; processNext();
+                    }).withFailureHandler(function(err) {
+                        currentIdx++; processNext();
+                    }).saveAdminData(currentUserPhone, 'Schedule', data, '梯次編號', true);
+                }
+                processNext();
+            }
+        }
+
+        function renderSchedules() {
+            var state = tbState.schedules;
+            var data = db.schedules.slice();
+            
+            var fDate = document.getElementById('filter-s-date') ? document.getElementById('filter-s-date').value : '';
+            var fKey = document.getElementById('filter-s-keyword') ? document.getElementById('filter-s-keyword').value.toLowerCase() : '';
+            
+            if (fDate) {
+                data = data.filter(function(s) { return String(s['日期']).replace(/\//g, '-') === fDate.replace(/\//g, '-'); });
+            }
+            
+            if (fKey) {
+                var keywords = fKey.split('@').map(function(k) { return k.trim(); }).filter(function(k) { return k; });
+                data = data.filter(function(s) {
+                    var c = db.courses.find(function(x) { return x['課程編號'] === s['課程編號']; });
+                    var searchStr = (s['課程編號'] + ' ' + (c?c['課程名稱']:'') + ' ' + (c?c['老師']:'') + ' ' + (c?c['地點']:'')).toLowerCase();
+                    return keywords.every(function(kw) { return searchStr.indexOf(kw) > -1; });
+                });
+            }
+
+            data.sort(function(a, b) {
+                var valA = a[state.sortCol] || ''; var valB = b[state.sortCol] || '';
+                if(state.sortCol === '日期') {
+                    valA = new Date(String(valA).replace(/-/g, '/')).getTime() || 0;
+                    valB = new Date(String(valB).replace(/-/g, '/')).getTime() || 0;
+                    return state.sortAsc ? valA - valB : valB - valA;
+                }
+                return state.sortAsc ? String(valA).localeCompare(String(valB)) : String(valB).localeCompare(String(valA));
+            });
+
+            var totalPages = Math.ceil(data.length / 10) || 1;
+            if(state.page > totalPages) state.page = totalPages;
+            if(state.page < 1) state.page = 1;
+            var pagedData = data.slice((state.page - 1) * 10, state.page * 10);
+
+            var th = function(label, col) { return '<th onclick="sortTb(\'schedules\', \'' + col + '\')">' + label + ' <span class="text-xs text-gray-400">' + (state.sortCol===col ? (state.sortAsc?'▲':'▼') : '↕') + '</span></th>'; };
+            var dayMap = {0:'日', 1:'一', 2:'二', 3:'三', 4:'四', 5:'五', 6:'六', 7:'日'};
+
+            var html = '<tr>' + th('梯次編號','梯次編號') + th('課程資訊','課程編號') + th('上課時間','日期') + th('狀態','是否完課') + '<th>操作</th></tr>'; 
+            pagedData.forEach(function(s) {
+                var c = db.courses.find(function(x) { return x['課程編號'] === s['課程編號']; });
+                var cInfo = c ? c['課程名稱'] + '<br><span class="text-xs text-gray-500 font-normal">' + c['老師'] + ' | ' + c['地點'] + '</span>' : s['課程編號'];
+                
+                var dObj = new Date(String(s['日期']).replace(/-/g, '/'));
+                var timeStr = '-';
+                if(!isNaN(dObj)) {
+                    timeStr = dObj.getFullYear() + '/' + (dObj.getMonth()+1) + '/' + dObj.getDate() + '(' + dayMap[s['星期']] + ')' + s['時間'];
+                }
+
+                var statHtml = String(s['是否完課']).toUpperCase() === 'TRUE' ? '<span class="text-gray-400">已完課</span>':'<span class="text-green-600">進行中</span>';
+
+                html += '<tr>' +
+                        '<td class="font-mono text-xs text-gray-400">' + s['梯次編號'] + '</td>' +
+                        '<td class="font-bold text-[#5B2333]">' + cInfo + '</td>' +
+                        '<td class="font-bold">' + timeStr + '</td>' +
+                        '<td>' + statHtml + '</td>' +
+                        '<td><div class="flex gap-2">' +
+                        '<button onclick="openScheduleModal(\'' + s['梯次編號'] + '\')" class="text-blue-600 hover:underline px-3 py-1 bg-blue-50 rounded">編輯</button>' +
+                        '<button onclick="openCopyModal(\'' + s['梯次編號'] + '\')" class="text-green-700 hover:underline px-3 py-1 bg-green-50 rounded hidden md:inline">複製</button>' +
+                        '<button onclick="deleteData(\'Schedule\', \'梯次編號\', \'' + s['梯次編號'] + '\')" class="text-red-600 hover:underline px-3 py-1 bg-red-50 rounded">刪除</button>' +
+                        '</div></td></tr>';
+            });
+            
+            document.getElementById('table-schedules').innerHTML = html;
+            document.getElementById('pg-schedules').innerHTML = '<button onclick="changePage(\'schedules\', -1)" class="px-3 py-1 bg-white border border-gray-300 rounded hover:bg-gray-100" ' + (state.page===1?'disabled':'') + '>上一頁</button>' +
+                '<span class="font-bold">第 ' + state.page + ' / ' + totalPages + ' 頁</span>' +
+                '<button onclick="changePage(\'schedules\', 1)" class="px-3 py-1 bg-white border border-gray-300 rounded hover:bg-gray-100" ' + (state.page===totalPages?'disabled':'') + '>下一頁</button>';
+        }
+
+        function openScheduleModal(id, prefillDate, prefillTime) {
+            id = id || '';
+            var sCourse = document.getElementById('s-course');
+            sCourse.innerHTML = '';
+            db.courses.forEach(function(c) {
+                sCourse.innerHTML += '<option value="' + c['課程編號'] + '">' + c['課程名稱'] + ' (' + c['老師'] + ' | ' + c['地點'] + ')</option>';
+            });
+            document.getElementById('s-id-hidden').value = id;
+            
+            var btnDel = document.getElementById('btn-s-delete');
+            var btnCopy = document.getElementById('btn-s-copy');
+            var batchGroup = document.getElementById('s-batch-group');
+
+            if(id) {
+                document.getElementById('s-title').innerText = '編輯梯次';
+                var s = db.schedules.find(function(x) { return x['梯次編號'] === id; });
+                document.getElementById('s-course').value = s['課程編號']; 
+                
+                var d = new Date(String(s['日期']).replace(/-/g, '/'));
+                if(!isNaN(d)) {
+                    var mm = String(d.getMonth()+1).padStart(2,'0');
+                    var dd = String(d.getDate()).padStart(2,'0');
+                    document.getElementById('s-date').value = d.getFullYear() + '-' + mm + '-' + dd;
+                }
+                
+                var tm = String(s['時間']).trim().match(/\d{1,2}:\d{2}/);
+                document.getElementById('s-time').value = tm ? tm[0].padStart(5, '0') : '09:00';
+                
+                var dur = parseInt(s['佔用時段'] || 60);
+                if (dur <= 24) dur = dur * 10;
+                document.getElementById('s-duration').value = dur; 
+                
+                document.getElementById('s-completed').value = String(s['是否完課']||'FALSE').toUpperCase();
+                
+                btnDel.classList.remove('hidden');
+                btnCopy.classList.remove('hidden');
+                batchGroup.classList.add('hidden');
+            } else {
+                document.getElementById('s-title').innerText = '新增梯次'; 
+                document.getElementById('form-schedule').reset();
+                document.getElementById('s-duration').value = '60'; 
+
+                if(prefillDate) document.getElementById('s-date').value = prefillDate.replace(/\//g, '-');
+                if(prefillTime) {
+                    var tm = prefillTime.trim().match(/\d{1,2}:\d{2}/);
+                    if(tm) document.getElementById('s-time').value = tm[0].padStart(5, '0');
+                }
+                btnDel.classList.add('hidden');
+                btnCopy.classList.add('hidden');
+                batchGroup.classList.remove('hidden'); 
+                document.getElementById('s-batch-month').checked = false;
+            }
+            document.getElementById('modal-schedule').classList.remove('hidden');
+        }
+
+        function handleAdminModalDelete() {
+            var id = document.getElementById('s-id-hidden').value;
+            closeModal('modal-schedule');
+            deleteData('Schedule', '梯次編號', id);
+        }
+
+        function handleAdminModalCopy() {
+            var id = document.getElementById('s-id-hidden').value;
+            closeModal('modal-schedule');
+            openCopyModal(id);
+        }
+
+        function saveSchedule(e) {
+            if(e) e.preventDefault();
+            var id = document.getElementById('s-id-hidden').value;
+            var isNew = !id; 
+            
+            var dateStr = document.getElementById('s-date').value;
+            if(!dateStr) return alert("請選擇日期");
+            var day = new Date(dateStr.replace(/-/g, '/')).getDay(); if(day === 0) day = 7;
+            
+            var datesToSave = [dateStr.replace(/-/g, '/')];
+
+            if (isNew && document.getElementById('s-batch-month').checked) {
+                var baseD = new Date(dateStr.replace(/-/g, '/'));
+                var y = baseD.getFullYear();
+                var m = baseD.getMonth();
+                var dObj = new Date(y, m, 1);
+                datesToSave = []; 
+
+                while(dObj.getMonth() === m) {
+                    var currentDay = dObj.getDay(); if(currentDay === 0) currentDay = 7;
+                    if(currentDay === day) {
+                        var mm = String(dObj.getMonth()+1).padStart(2,'0');
+                        var dd = String(dObj.getDate()).padStart(2,'0');
+                        datesToSave.push(dObj.getFullYear() + '/' + mm + '/' + dd);
+                    }
+                    dObj.setDate(dObj.getDate() + 1);
+                }
+            }
+
+            closeModal('modal-schedule');
+            document.getElementById('loading-text').innerText = '寫入排程中...'; 
+            document.getElementById('loading').classList.remove('hidden');
+
+            var maxNum = 0;
+            db.schedules.forEach(function(item) {
+                var match = String(item['梯次編號']||'').match(/^I(\d{4})$/);
+                if(match) maxNum = Math.max(maxNum, parseInt(match[1]));
+            });
+
+            if (typeof google !== 'undefined' && typeof google.script !== 'undefined') {
+                var currentIdx = 0;
+                function processNext() {
+                    if (currentIdx >= datesToSave.length) {
+                        loadAllData();
+                        return;
+                    }
+                    
+                    var targetDate = datesToSave[currentIdx];
+                    var newId = isNew ? 'I' + String(maxNum + currentIdx + 1).padStart(4, '0') : id;
+                    
+                    var rowData = {
+                        '梯次編號': newId, 
+                        '課程編號': document.getElementById('s-course').value, 
+                        '日期': targetDate, 
+                        '星期': day, 
+                        '時間': document.getElementById('s-time').value, 
+                        '佔用時段': document.getElementById('s-duration').value,
+                        '是否完課': document.getElementById('s-completed').value
+                    };
+
+                    google.script.run.withSuccessHandler(function(res) {
+                        currentIdx++; processNext();
+                    }).withFailureHandler(function(err) {
+                        alert('寫入 ' + targetDate + ' 時發生錯誤: ' + err);
+                        currentIdx++; processNext();
+                    }).saveAdminData(currentUserPhone, 'Schedule', rowData, '梯次編號', isNew);
+                }
+                processNext();
+            }
+            return false;
+        }
+
+        function openCopyModal(instanceId) {
+            sourceScheduleForCopy = db.schedules.find(function(x) { return x['梯次編號'] === instanceId; });
+            if(!sourceScheduleForCopy) return;
+            
+            var c = db.courses.find(function(x) { return x['課程編號'] === sourceScheduleForCopy['課程編號']; });
+            var cName = c ? c['課程名稱'] + ' (' + c['老師'] + ')' : sourceScheduleForCopy['課程編號'];
+            
+            document.getElementById('copy-course-name').innerText = cName;
+            document.getElementById('copy-time-info').innerText = sourceScheduleForCopy['日期'] + ' - ' + sourceScheduleForCopy['時間'];
+            
+            selectedCopyDates.clear();
+            renderCopyDates();
+            document.getElementById('modal-copy').classList.remove('hidden');
+        }
+
+        function addCopyDate() {
+            var datePicker = document.getElementById('copy-date-picker');
+            var dateVal = datePicker.value;
+            if(!dateVal) return alert('請先選擇日期');
+            
+            selectedCopyDates.add(dateVal.replace(/-/g, '/'));
+            renderCopyDates();
+            datePicker.value = '';
+        }
+
+        function addMonthCopy() {
+            var monthVal = document.getElementById('copy-month-picker').value; 
+            if(!monthVal) return alert('請選擇月份');
+            if(!sourceScheduleForCopy) return;
+
+            var targetDay = parseInt(sourceScheduleForCopy['星期']); 
+            if(targetDay === 7) targetDay = 0; 
+
+            var parts = monthVal.split('-');
+            var d = new Date(parts[0], parseInt(parts[1])-1, 1);
+
+            var addedCount = 0;
+            while(d.getMonth() === parseInt(parts[1])-1) {
+                if(d.getDay() === targetDay) {
+                    var mm = String(d.getMonth()+1).padStart(2,'0');
+                    var dd = String(d.getDate()).padStart(2,'0');
+                    selectedCopyDates.add(d.getFullYear() + '/' + mm + '/' + dd);
+                    addedCount++;
+                }
+                d.setDate(d.getDate() + 1);
+            }
+            if(addedCount > 0) {
+                renderCopyDates();
+                alert('已成功將本月符合的 ' + addedCount + ' 天加入清單！');
+            } else {
+                alert('這個月找不到符合該星期的日期。');
+            }
+        }
+
+        function removeCopyDate(dateStr) {
+            selectedCopyDates.delete(dateStr);
+            renderCopyDates();
+        }
+
+        function renderCopyDates() {
+            var listEl = document.getElementById('copy-date-list');
+            if(selectedCopyDates.size === 0) {
+                listEl.innerHTML = '<span class="text-gray-400 text-xs py-2 px-1">尚未加入任何日期</span>';
+                return;
+            }
+            var html = '';
+            selectedCopyDates.forEach(function(dateStr) {
+                html += '<div class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs flex items-center shadow-sm">' +
+                        dateStr + ' <button onclick="removeCopyDate(\'' + dateStr + '\')" class="ml-2 text-red-500 hover:text-red-700"><iconify-icon icon="ph:x-bold"></iconify-icon></button></div>';
+            });
+            listEl.innerHTML = html;
+        }
+
+        function executeBatchCopy() {
+            if(selectedCopyDates.size === 0) return alert('請至少加入一個日期');
+            
+            closeModal('modal-copy');
+            document.getElementById('loading-text').innerText = '大量寫入中，請稍候...'; 
+            document.getElementById('loading').classList.remove('hidden');
+
+            var datesArray = Array.from(selectedCopyDates);
+            var maxNum = 0;
+            db.schedules.forEach(function(item) {
+                var m = String(item['梯次編號']||'').match(/^I(\d{4})$/);
+                if(m) maxNum = Math.max(maxNum, parseInt(m[1]));
+            });
+
+            if (typeof google !== 'undefined' && typeof google.script !== 'undefined') {
+                var currentIdx = 0;
+                function processNext() {
+                    if (currentIdx >= datesArray.length) {
+                        loadAllData();
+                        return;
+                    }
+                    
+                    var targetDate = datesArray[currentIdx];
+                    var newId = 'I' + String(maxNum + currentIdx + 1).padStart(4, '0');
+                    var day = new Date(targetDate.replace(/-/g, '/')).getDay(); if(day === 0) day = 7;
+                    
+                    var rowData = JSON.parse(JSON.stringify(sourceScheduleForCopy));
+                    rowData['梯次編號'] = newId;
+                    rowData['日期'] = targetDate;
+                    rowData['星期'] = day;
+                    rowData['是否完課'] = 'FALSE';
+
+                    google.script.run.withSuccessHandler(function(res) {
+                        currentIdx++; processNext();
+                    }).withFailureHandler(function(err) {
+                        currentIdx++; processNext();
+                    }).saveAdminData(currentUserPhone, 'Schedule', rowData, '梯次編號', true);
+                }
+                processNext();
+            }
+        }
+
+        function renderBookings() {
+            var html = '<tr><th>梯次資訊</th><th>學員資訊</th><th>狀態</th><th>紀錄時間</th></tr>';
+            var revBookings = db.bookings.slice().reverse();
+            revBookings.forEach(function(b) {
+                var sch = db.schedules.find(function(x) { return x['梯次編號'] === b['梯次編號']; });
+                var cId = sch ? sch['課程編號'] : '';
+                var uPhone = String(b['會員編號'] || b['會員電話']).replace(/^'/, '');
+                html += '<tr>' +
+                        '<td><span class="font-bold">' + getCourseName(cId) + '</span><br><span class="text-xs text-gray-400">' + b['梯次編號'] + '</span></td>' +
+                        '<td><span class="font-bold">' + getUserName(uPhone) + '</span><br><span class="text-xs text-gray-400 font-mono">' + uPhone + '</span></td>' +
+                        '<td><span class="px-2 py-1 bg-gray-100 rounded text-xs">' + b['狀態'] + '</span></td>' +
+                        '<td class="text-xs text-gray-500 font-mono tracking-wide">' + (b['紀錄時間'] || b['預約時間'] || b[Object.keys(b)[3]] || '無時間紀錄') + '</td></tr>';
+            });
+            document.getElementById('table-bookings').innerHTML = html;
+        }
+
+        function renderLogs() {
+            var html = '<tr><th>時間</th><th>動作與細節</th><th>會員</th><th>標的物</th></tr>';
+            var revLogs = db.logs.slice().reverse();
+            revLogs.forEach(function(l) {
+                var uPhone = String(l['會員']||l[Object.keys(l)[2]]).replace(/^'/, '');
+                html += '<tr>' +
+                        '<td class="text-xs text-gray-500 font-mono">' + (l['時間']||l[Object.keys(l)[0]]) + '</td>' +
+                        '<td><div class="font-bold text-[#5B2333] mb-1">' + (l['動作']||l[Object.keys(l)[1]]) + '</div>' +
+                        '<div class="text-xs text-gray-600 bg-gray-100 p-1.5 rounded inline-block shadow-sm border border-gray-200">' + (l['備註']||l[Object.keys(l)[4]]||'無備註說明') + '</div></td>' +
+                        '<td>' + getUserName(uPhone) + ' <br><span class="text-xs text-gray-400 font-mono">' + uPhone + '</span></td>' +
+                        '<td class="font-mono text-xs text-gray-500">' + (l['相關梯次']||l[Object.keys(l)[3]]||'-') + '</td></tr>';
+            });
+            document.getElementById('table-logs').innerHTML = html;
+        }
+
+        function doSave(sheetName, data, keyCol, isNew, modalId) {
+            closeModal(modalId); 
+            if(sheetName === 'Schedule') return;
+
+            document.getElementById('loading-text').innerText = '寫入資料中...'; 
+            document.getElementById('loading').classList.remove('hidden');
+            if (typeof google !== 'undefined' && typeof google.script !== 'undefined') {
+                google.script.run.withSuccessHandler(function(res) {
+                    if(!res.success) { alert(res.msg); document.getElementById('loading').classList.add('hidden'); return; }
+                    loadAllData();
+                }).withFailureHandler(function(err) {
+                    alert('寫入發生錯誤：' + err); document.getElementById('loading').classList.add('hidden');
+                }).saveAdminData(currentUserPhone, sheetName, data, keyCol, isNew);
+            }
+        }
+        
+        function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+    </script>
+</body>
+</html>
